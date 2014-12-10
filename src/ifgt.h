@@ -15,7 +15,7 @@
 	// pmax -> maximum number of terms
 	// 
 	// constant -> output coefficients of monomials
-	void calc_constant(int d, int pmax, double *constant);
+	void calc_constant(double *constant);
 
 	// Calculate C_alpha
 	// x -> number of data points
@@ -30,6 +30,6 @@
 	void calc_c_alpha(int n, int d, int pmax, double *x, double *c, double h, double *q, double *c_alpha);
 	
 	// Calculate ifgt gauss tranform form m test points given by y
-	void calc_ifgt_gauss_transform(int n, int m, int d, int pmax, double *x, double *y, double *c, double h, double *q, double *f);
+	void calc_ifgt_gauss_transform(int n, int m, int d, int nk, int pmax, double *x, double *y, double *centers, unsigned int *cidx, double h, double *q, double *f);
 
 	#endif

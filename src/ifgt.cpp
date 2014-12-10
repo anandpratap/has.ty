@@ -14,17 +14,16 @@
 	// calculate monomianls
 	// used both for source and target
 	void calc_monomial(int d, double *dx, int pmax, double *source_monomial){
-		int *heads = new int[d]();
-		int order = pmax - 1;
-
+		int heads[DIMENSIONS] = {0};
+		
 		source_monomial[0] = 1.0;
 		
 		int m, tail, head;
 		m = 1;
 		tail = 0;
 		
-		for(int ord=0; ord < order; ord++){
-			for(int i=0; i < d; i++){
+		for(int ord=0; ord < PMAX - 1; ord++){
+			for(int i=0; i < DIMENSIONS; i++){
 
 				head = heads[i];
 				heads[i] = m;
@@ -37,26 +36,24 @@
 			tail = m - 1;
 		}
 
-		delete[] heads;
 	}
 
 
 	// calculate coefficients
-	void calc_constant(int d, int pmax, double *constant){
-		int *heads = new int[d+1]();
-		heads[d] = std::numeric_limits<int>::max();
+	void calc_constant(double *constant){
+		int heads[DIMENSIONS+1] = {0};
+		heads[DIMENSIONS] = std::numeric_limits<int>::max();
 
-		int order = pmax - 1;
 		constant[0] = 1.0;
 		
-		int *cinds = new int[nchoosek(pmax-1+d, d)]();
+		int cinds[NALPHA] = {0};
 		cinds[0] = 0;
 
 		int m, tail, head;
 		m = 1;
 		tail = 0;
-		for(int ord=0; ord < order; ord++){
-			for(int i=0; i < d; i++){
+		for(int ord=0; ord < PMAX-1; ord++){
+			for(int i=0; i < DIMENSIONS; i++){
 		
 				head = heads[i];
 				heads[i] = m;
@@ -76,83 +73,77 @@
 			tail = m - 1;
 		}
 
-		delete[] heads;
-		delete[] cinds;
+		
 	}
 
 
-	void calc_c_alpha(int n, int d, int pmax, double *x, double *c, double h, double *q, double *c_alpha){
-		int nalpha = nchoosek(pmax-1+d, d);
+	void calc_c_alpha(int n, int d, int pmax, int nk, double *x, double *c, unsigned int *cidx, double h, double *q, double *c_alpha){
 
-		double *source_monomial = new double[nalpha]();
-		double *constant = new double[nalpha]();
-		double *dx = new double[d]();
 
-		set_zeros(nalpha, c_alpha);
+		double source_monomial[NALPHA] = {0};
+		double constant[NALPHA] = {0};
+		double dx[DIMENSIONS] = {0};
+
+		set_zeros(NALPHA*nk, c_alpha);
 		
 		for(int i = 0; i < n; i++){
 			
 			// calculate dx/h
 			for(int j=0; j<d; j++){
-				dx[j] = (x[i*d+j] - c[j])/h;
+				dx[j] = (x[i*d+j] - c[cidx[i]*DIMENSIONS + j])/h;
 			}
 			double dx2 = l2normsq(d, dx);
 
 			// calc monomial contribution and add it to c_alpha
 			calc_monomial(d, dx, pmax, source_monomial);
-			for(int alpha=0; alpha < nalpha; alpha++){
-				c_alpha[alpha] = c_alpha[alpha] + source_monomial[alpha]*q[i]*exp(-dx2);
+			for(int alpha=0; alpha < NALPHA; alpha++){
+				c_alpha[cidx[i]*NALPHA + alpha] += source_monomial[alpha]*q[i]*exp(-dx2);
 			}
 
 		}
 
 		// calculate constant and multiple it with the monomials
-		calc_constant(d, pmax, constant);
-		for(int alpha=0; alpha < nalpha; alpha++){
-			c_alpha[alpha] *= constant[alpha];
+		calc_constant(constant);
+		for(int alpha=0; alpha < NALPHA; alpha++){
+			for(int k=0; k<nk; k++){
+				c_alpha[k*NALPHA + alpha] *= constant[alpha];
+			}
 		}
 		
-		delete[] dx;
-		delete[] constant;
-		delete[] source_monomial;
-
+		
 	}
 
 
-	void calc_ifgt_gauss_transform(int n, int m, int d, int pmax, double *x, double *y, double *c, double h, double *q, double *f){
-		int nalpha = nchoosek(pmax-1+d, d);
-
-		double *c_alpha = new double[nalpha]();
-		double *target_monomial = new double[nalpha]();
-		double *dy = new double[d]();
+	void calc_ifgt_gauss_transform(int n, int m, int d, int nk, int pmax, double *x, double *y, double *centers, unsigned int *cidx, double h, double *q, double *f){
+		//double c_alpha[NALPHA] = {0};
+		double *c_alpha = new double[NALPHA*nk]();
+		double target_monomial[NALPHA] = {0};
+		double dy[DIMENSIONS] = {0};
 		
 		// calcuate source coefficients
-		calc_c_alpha(n, d, pmax, x, c, h, q, c_alpha);
-
+		calc_c_alpha(n, DIMENSIONS, pmax, nk, x, centers, cidx, h, q, c_alpha);
+		printf("Source calculated\n");
 		// for all test points
 		for(int i=0; i< m; i++){
-			
-			set_zeros(nalpha, target_monomial);
-			
-			for(int j=0; j<d; j++){
-				dy[j] = (y[i*d+j] - c[j])/h;
-			}
-			double dy2 = l2normsq(d, dy);
-			
-			// calculate target monomials
-			calc_monomial(d, dy, pmax, target_monomial);
-
 			// calculate the ifgt
 			f[i] = 0.0;
-			for(int alpha=0; alpha<nalpha; alpha++){
-				f[i] += target_monomial[alpha]*c_alpha[alpha]*exp(-dy2);
+
+			for(int k=0; k<nk; k++){
+				set_zeros(NALPHA, target_monomial);
+				for(int d=0; d<DIMENSIONS; d++){
+					dy[d] = (y[i*DIMENSIONS+d] - centers[k*DIMENSIONS+d])/h;
+				}
+
+				double dy2 = l2normsq(d, dy);
+
+			// calculate target monomials
+				calc_monomial(DIMENSIONS, dy, pmax, target_monomial);
+				for(int alpha=0; alpha<NALPHA; alpha++){
+					f[i] += target_monomial[alpha]*c_alpha[k*NALPHA + alpha]*exp(-dy2);
+				}
 			}
-
 		}
-
-		// clean up
 		delete[] c_alpha;
-		delete[] dy;
 	}
 
 	#endif

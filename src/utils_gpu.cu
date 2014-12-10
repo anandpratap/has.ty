@@ -3,15 +3,12 @@
 	#include <stdlib.h>
 
 	#include <cmath> // exp
+	#include <stdlib.h>
+	#include <stdio.h>
 	// local includes
 	#include "common.h"
 		
-	__device__ void set_zeros_gpu(int n, double *x){
-		for(int i=0; i< n; i++)
-			x[i] = 0.0;
-	}
-
-
+	
 	__device__ int nchoosek_gpu(int n, int k){
 		int n_k = n - k;
 		if (k < n_k){
@@ -28,12 +25,23 @@
 	}
 
 	
-	__device__ double l2normsq_gpu(int n, double *x){
+	__device__ double l2normsq_gpu(double *x){
 		double norm = 0.0;
-		for(int i=0; i<n; i++){
+		for(int i=0; i<DIMENSIONS; i++){
 			norm += x[i]*x[i];
 		}
 		return norm;
+	}
+	
+
+	
+	void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+	{
+		if (code != cudaSuccess) 
+		{
+			fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+			if (abort) exit(code);
+		}
 	}
 
 	#endif

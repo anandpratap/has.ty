@@ -2,10 +2,12 @@
 	#define _UTILS_H
 	
 	#include "string.h"
-
+	#include "common.h"
+	
+	
 	// set first n elements of array x to zero
-	template <class dtype>
-	void set_zeros(int n, dtype *x);
+
+	void set_zeros(int n, double *x);
 
 	// calculate n!/k!(n-k)!
 	int nchoosek(int n, int k);
@@ -21,5 +23,12 @@
 
 	// calculate square of the l2 norm
 	double l2normsq(int n, double *x);
+
+	void clustering(int n, int nk, double *x, double *q, unsigned int *cidx, double *centers, unsigned int *np, struct cluster *clusters);
+
+	unsigned int get_max_num_points(int ncluster, struct cluster *clusters);
+
+	void hline();
+	void gprintf(const char *x);
 
 	#endif
