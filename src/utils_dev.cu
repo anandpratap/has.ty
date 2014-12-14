@@ -9,7 +9,7 @@
 	#include "common.h"
 		
 	
-	__device__ int nchoosek_gpu(int n, int k){
+	__device__ int nchoosek_dev(int n, int k){
 		int n_k = n - k;
 		if (k < n_k){
 			k = n_k;
@@ -25,7 +25,7 @@
 	}
 
 	
-	__device__ double l2normsq_gpu(double *x){
+	__device__ double l2normsq_dev(double *x){
 		double norm = 0.0;
 		for(int i=0; i<DIMENSIONS; i++){
 			norm += x[i]*x[i];

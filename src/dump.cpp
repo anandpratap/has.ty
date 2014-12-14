@@ -113,3 +113,84 @@ __global__ void reduce_k(int n, int nk, double *c_alpha_dev){
 
 	}
 
+void calc_centroid(int n, int d, double *x, double *c){
+		set_zeros(d, c);
+
+		for(int i=0; i<n; i++){
+			for(int j=0; j<d; j++){
+				c[j] += x[d*i +j];
+			}
+		}
+		
+		for(int i=0; i < d; i++){
+			c[i] = c[i]/n;
+		}
+	}
+	
+	int nchoosek(int n, int k){
+		int n_k = n - k;
+		if (k < n_k){
+			k = n_k;
+			n_k = n - k;
+		}
+		int  nchsk = 1; 
+		for ( int i = 1; i <= n_k; i++){
+			nchsk *= (++k);
+			nchsk /= i;
+		}
+
+		return nchsk;
+	}	void calc_centers_forgpu(int n, int nk, double *centers, unsigned int *cidx, int *delta_cidx, double *x, unsigned int *np, unsigned int *delta){
+		unsigned int old_cidx;
+		unsigned int new_cidx;
+
+	*delta = 0;
+		for(int i=0; i<n; i++){
+			if(delta_cidx[i] != 0){
+
+				old_cidx = cidx[i];
+				new_cidx = old_cidx + delta_cidx[i];
+				cidx[i] = new_cidx;
+				assert(old_cidx + delta_cidx[i] >= 0);
+				for(int d=0; d<DIMENSIONS; d++){
+					if(np[old_cidx] - 1 > 0)
+						centers[old_cidx*DIMENSIONS+d] = (np[old_cidx]*centers[old_cidx*DIMENSIONS+d] - x[i])/(np[old_cidx] - 1);
+					else
+						centers[old_cidx*DIMENSIONS+d] = 0;
+					centers[new_cidx*DIMENSIONS+d] = (np[new_cidx]*centers[new_cidx*DIMENSIONS+d] + x[i])/(np[new_cidx] + 1);
+
+				}
+				np[old_cidx] -= 1;
+				np[new_cidx] += 1;
+				*delta += 1;
+
+			}
+		}
+
+	}
+
+
+
+//__global__ void clustering_copy_centers(int ncluster, double *clus_centers_dev, double *clus_centers_new_dev, unsigned int *clus_np_dev, unsigned int *clus_np_new_dev);
+	// __global__ void clustering_swap(int ncluster, double *clus_centers_dev, double *clus_centers_new_dev, unsigned int *clus_np_dev, unsigned int *clus_np_new_dev);
+
+	__global__ void clustering_copy_centers(int ncluster, double *centers_dev, double *centers_new_dev, unsigned int *np_dev, unsigned int *np_new_dev){
+		int idx = blockDim.x*blockIdx.x + threadIdx.x;
+		if(idx < ncluster*DIMENSIONS){
+			centers_new_dev[idx] = centers_dev[idx];
+		}
+		if(idx < ncluster){
+			np_new_dev[idx] = np_dev[idx];
+		}
+	}
+
+	__global__ void clustering_swap(int ncluster, double *centers_dev, double *centers_new_dev, unsigned int *np_dev, unsigned int *np_new_dev){
+		int idx = blockDim.x*blockIdx.x + threadIdx.x;
+		if(idx < ncluster*DIMENSIONS){
+			centers_dev[idx] = centers_new_dev[idx];
+		}
+
+		if(idx < ncluster){
+			np_dev[idx] = np_new_dev[idx];
+		}
+	}

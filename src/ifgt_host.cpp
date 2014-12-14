@@ -1,17 +1,16 @@
-	#ifndef _IFGT_H
-	#define _IFGT_H
+	#ifndef _IFGT_HOST_H
+	#define _IFGT_HOST_H
+	#include <iostream>
+	#include <chrono>
+	#include <cmath>
 
-	
-	#include <stdio.h>
-	#include <limits>  // max int
-	#include <cmath> // exp
-	
-	// local includes	
-	#include "utils.h"
-	#include "common.h" // DEBUG 
-	
-	
-	// calculate monomianls
+	#include "common.h"
+	#include "utils_host.h"
+	#include "clustering_host.h"
+
+	#include "ifgt_host.h"
+
+		// calculate monomianls
 	// used both for source and target
 	void calc_monomial(int d, double *dx, int pmax, double *source_monomial){
 		int heads[DIMENSIONS] = {0};
@@ -92,7 +91,7 @@
 			for(int j=0; j<d; j++){
 				dx[j] = (x[i*d+j] - c[cidx[i]*DIMENSIONS + j])/h;
 			}
-			double dx2 = l2normsq(d, dx);
+			double dx2 = l2normsq(dx);
 
 			// calc monomial contribution and add it to c_alpha
 			calc_monomial(d, dx, pmax, source_monomial);
@@ -134,7 +133,7 @@
 					dy[d] = (y[i*DIMENSIONS+d] - centers[k*DIMENSIONS+d])/h;
 				}
 
-				double dy2 = l2normsq(d, dy);
+				double dy2 = l2normsq(dy);
 
 			// calculate target monomials
 				calc_monomial(DIMENSIONS, dy, pmax, target_monomial);
@@ -145,5 +144,45 @@
 		}
 		delete[] c_alpha;
 	}
+
+
+
+	void ifgt_host(int ndata, int mdata, int ncluster, double h, double *x, double *q, double *y, double *f){
+		hline();
+		gprintf("CPU: Improved Fast Gauss Transform\n");
+		hline();
+		auto start = std::chrono::system_clock::now();
+
+		// make clusters
+		double *centers = new double[DIMENSIONS*ncluster]();
+		unsigned int *cidx = new unsigned int [ndata]();
+		unsigned int *np = new unsigned int [ncluster]();
+		struct cluster *clusters = new struct cluster[ncluster]();
+		
+		clustering(ndata, ncluster, x, cidx, centers, np);
+		rearrange_data(ndata, ncluster, x, q, cidx, centers, np, clusters);
+		
+		auto end = std::chrono::system_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		std::cout << "CPU clustering time (in ms): " << elapsed.count() << '\n';
+
+
+
+		start = std::chrono::system_clock::now();
+		
+		// calculate ifgt
+		calc_ifgt_gauss_transform(ndata, mdata, DIMENSIONS, ncluster, PMAX, x, y, centers, cidx, h, q, f);
+		
+		end = std::chrono::system_clock::now();
+		elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		std::cout << "CPU IFGT time (in ms): " << elapsed.count() << '\n';
+		hline();
+
+		delete[] centers;
+		delete[] cidx;
+		delete[] np;
+		delete[] clusters;
+	}
+
 
 	#endif

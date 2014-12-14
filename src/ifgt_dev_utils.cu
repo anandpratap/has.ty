@@ -7,7 +7,7 @@
 	#include <cmath> // exp
 
 	// local includes	
-	#include "utils_gpu.h"
+	#include "utils_dev.h"
 	#include "common.h" // DEBUG 
 	
 	// global device variables
@@ -16,7 +16,7 @@
 
 	__device__ double coeff_global[KMAX*NALPHA] = {0};
 	
-	__device__ inline void AtomicAddDouble (volatile double *address, double value){
+	__device__ void AtomicAddDouble (volatile double *address, double value){
 		
 		unsigned long long oldval, newval, readback; 
 		oldval = __double_as_longlong(*address);
@@ -78,7 +78,7 @@
 			}
 		    // calculate source monomial
 			calc_monomial_gpu(idx, DIMENSIONS, PMAX, NALPHA, dx, source_monomial_local);
-			ex = exp(-l2normsq_gpu(dx))*q[idx];
+			ex = exp(-l2normsq_dev(dx))*q[idx];
 
 			// source*exp(-dx^2/h^2),  2^{alpha}/alpha! is multiplied in the reduction step to save the computations
 			for(unsigned short int alpha=0; alpha<NALPHA; alpha++){
@@ -138,7 +138,7 @@
 				for(int d=0; d<DIMENSIONS; d++){
 					dy[d] = (y[idx*DIMENSIONS + d] - centers_dev[c*DIMENSIONS + d])/h;
 				}
-				ex = exp(-l2normsq_gpu(dy));
+				ex = exp(-l2normsq_dev(dy));
 		    // calc target monomial
 				calc_monomial_gpu(idx, DIMENSIONS, PMAX, NALPHA, dy, target_monomial_local);
 				for(unsigned short int alpha=0; alpha<NALPHA; alpha++){

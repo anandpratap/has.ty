@@ -1,8 +1,8 @@
 CXX = nvcc
 NCXX = nvcc
-CFLAGS = -g -std=c++11 -ccbin=g++ --maxrregcount=32 -lineinfo
-DEPS = utils.h ifgt.h io.h utils_gpu.h ifgt_gpu.h
-OBJ = main.o utils.o ifgt.o io.o utils_gpu.o ifgt_gpu.o 
+CFLAGS = -std=c++11 -ccbin=g++ --maxrregcount=32 -lineinfo -lcurand 
+DEPS = utils_host.h io.h utils_dev.h ifgt_dev.h clustering_dev.h ifgt_host.h ifgt_dev_utils.h clustering_host.h exact_gt.h
+OBJ = main.o utils_host.o io.o utils_dev.o ifgt_dev.o clustering_dev.o ifgt_host.o ifgt_dev_utils.o clustering_host.o exact_gt.o
 INC = -I/usr/local/cuda-6.5/include
 
 %.o: %.cpp $(DEPS)
